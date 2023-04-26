@@ -1,2 +1,1 @@
 # situational_semantics_richness
-# situational_semantics_richness
