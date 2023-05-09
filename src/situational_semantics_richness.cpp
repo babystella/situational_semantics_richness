@@ -46,34 +46,6 @@ int zero_cnt = 0;
 
 
 
-
-// void processcallback(const std_msgs::Float32::ConstPtr& msg, int topic_num)
-// { 
-//     ros::Time msg_time = msg->header.stamp;
-	
-// 	if (topic_num == 1) {
-//         float sv = msg->data;
-// 		ROS_INFO("sv score:%.3f", sv);
-//     } else if (topic_num == 2) {
-//         float SHAScore = msg->data;
-// 		// ROS_INFO("ssr score:%.3f", SHAScore);
-//     }
-	
-
-// 	// float sv = msg->data;
-// 	// float SHAScore = msg->data;
-
-
-//     float ssr =  sv*50000 + SHAScore;
-
-// }
-
-
-
-
-
-
-
 void processcallback(const radiation::sievert::ConstPtr msg1, const sha::sha::ConstPtr msg2)
 { 
     // ros::Time msg_time = msg1->header.stamp;
