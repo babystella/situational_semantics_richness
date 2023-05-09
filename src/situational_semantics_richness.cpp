@@ -9,6 +9,9 @@
 #include <message_filters/subscriber.h>
 #include <message_filters/synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
+#include <chrono>
+
+
 #include <numeric>
 #include <iostream>
 #include <fstream>
@@ -27,6 +30,10 @@
 
 using namespace message_filters;
 using namespace std;
+using namespace sha;
+using namespace radiation;
+
+
 
 float sv;
 float shascore;
@@ -38,28 +45,6 @@ int highscore_cnt = 0;
 int zero_cnt = 0;
 
 
-
-
-
-//     	// Publish the message
-//     ssr_pub.publish(SSRscore);
-// 	}message_filters/sync_policies/approximate_time.h
-
-// }
-
-
-
-
-
-// float processcallback(float a, float b)
-// { 
-//     float sv = a;
-// 	float SHAScore = b;
-
-//     float ssr = SHAScore + sv*50000;
-// 	ROS_INFO("ssr score:%.3f", ssr);
-// 	return(ssr);
-// }
 
 
 
@@ -86,13 +71,57 @@ int zero_cnt = 0;
 // }
 
 
+// void synchronize(const radiation::sievert::ConstPtr& msg1, const sha::sha::ConstPtr& msg2)
+// { 
+//     // ros::Time msg_time = msg1->header.stamp;
+// 	float SV_timestamp = msg1->header.stamp;
+// 	float shascore_timestamp = msg2->header.stamp;
+	
+// 	while (true) 
+// 	{
+//         auto time1 = std::chrono::system_clock::now();
+//         auto time1_c = std::chrono::system_clock::to_time_t(time1);
+
+//         // Check if message2 should be published
+//         if (shascore_timestamp - SV_timestamp >= 10000000) {
+//             std::cout << std::put_time(std::localtime(&time2_c), "[%Y-%m-%d %H:%M:%S] ") << "Message 2" << std::endl;
+//             time2 += std::chrono::seconds(1); // Increment time2 by 1 second
+//             time2_c = std::chrono::system_clock::to_time_t(time2);
+//         }
+
+//         // Publish message1
+//         std::cout << std::put_time(std::localtime(&time1_c), "[%Y-%m-%d %H:%M:%S] ") << "Message 1" << std::endl;
+//         std::this_thread::sleep_for(std::chrono::milliseconds(10)); // Sleep for 10ms to simulate 100Hz
+//     }
 
 
 
-void processcallback(const radiation::sievert::ConstPtr& msg1, const sha::sha::ConstPtr& msg2)
+// 	float SV = msg1->sv;
+// 	float shascore = msg2->SHAScore;
+	
+// 	ROS_INFO("sv:%.3f", SV);
+//     std::cout<< "processcallback is running" << std::endl;
+// 	float ssr =  SV*1000 + shascore;
+
+
+
+
+
+
+
+
+	
+// }
+
+
+
+
+void processcallback(const radiation::sievert::ConstPtr msg1, const sha::sha::ConstPtr msg2)
 { 
     // ros::Time msg_time = msg1->header.stamp;
 
+	int SV_timestamp = msg1->header.stamp.toSec();
+	int shascore_timestamp = msg2->header.stamp.toSec();
 
 	float SV = msg1->sv;
 	float shascore = msg2->SHAScore;
@@ -100,27 +129,13 @@ void processcallback(const radiation::sievert::ConstPtr& msg1, const sha::sha::C
 	ROS_INFO("sv:%.3f", SV);
     std::cout<< "processcallback is running" << std::endl;
 	float ssr =  SV*1000 + shascore;
-
+	
 }
 
 
 
 
-// void processcallback(const std_msgs::Float32::ConstPtr& msg1, const std_msgs::Float32::ConstPtr& msg2)
-// { 
-//     // ros::Time msg_time = msg1->header.stamp;
 
-	
-
-// 	float sv = msg1->data;
-// 	float SHAScore = msg2->data;
-
-
-//     float ssr =  sv*50000 + SHAScore;
-
-	
-
-// }
 
 
 // void svcallback(const radiation::sievert::ConstPtr& sv_digit)
@@ -143,41 +158,25 @@ int main(int argc, char *argv[])
 
 	// Init ROS
 	ros::init(argc, argv, "ssr");
-	ROS_INFO("Start evaluating SSR, waiting for detections result...");
+	// ROS_INFO("Start evaluating SSR, waiting for detections result...");
 	ros::NodeHandle nh;
 	
 
-
-	// ros::Subscriber sv_sub = nh.subscribe<std_msgs::Float32>("/sievert", 1, svcallback);
-	// ros::Subscriber sha_sub = nh.subscribe<std_msgs::Float32>("/SHA/score", 1, shacallback);
-
-
-	// ros::Subscriber sv_sub = nh.subscribe<radiation::radiation>("/radiation/sievert", 10, svcallback);
-	// ros::Subscriber sha_sub = nh.subscribe<sha::sha>("/SHA/score/", 10, shacallback);
-
-	// ros::Subscriber sv_sub = nh.subscribe<std_msgs::Float32>("/sievert", 10, boost::bind(&processcallback, _1, 1));
-	// ros::Subscriber sha_sub = nh.subscribe<std_msgs::Float32>("/SHA/score", 10, boost::bind(&processcallback, _1, 2));
-	
-	// typedef message_filters::sync_policies::ApproximateTime<std_msgs::Float32, std_msgs::Float32> MySyncPolicy;
-	
-	typedef sync_policies::ApproximateTime<radiation::sievert, sha::sha> MySyncPolicy;
-	
-	// message_filters::Subscriber<std_msgs::Float32> sv_sub(nh, "/sievert", 1);
-	// message_filters::Subscriber<std_msgs::Float32> sha_sub(nh, "/SHA/score", 1);
 
 
 
 	message_filters::Subscriber<radiation::sievert> sv_sub(nh, "/radiation/sievert", 1);
 	message_filters::Subscriber<sha::sha> sha_sub(nh, "/SHA/score/", 1);
-	
-    message_filters::Synchronizer<MySyncPolicy> sync(MySyncPolicy(10), sv_sub, sha_sub);
+	typedef message_filters::sync_policies::ApproximateTime<radiation::sievert, sha::sha> MySyncPolicy;
+	// typedef message_filters::TimeSynchronizer<radiation::sievert, sha::sha> MySyncPolicy;
+    
+	// TimeSynchronizer<radiation::sievert, sha::sha> sync(sv_sub, sha_sub, 10);  
+	message_filters::Synchronizer<MySyncPolicy> sync(MySyncPolicy(10), sv_sub, sha_sub);
     sync.registerCallback(boost::bind(&processcallback, _1, _2));
-
-
-	// ros::Subscriber sha_sub = nh.subscribe("SSR/sha", 10, boost::bind(&processcallback, _2, &sv_digit));
 	
-	ros::Publisher ssr_pub = nh.advertise<situational_semantics_richness::situational_semantics_richness>("SSR/score/", 10);
 
+
+	ros::Publisher ssr_pub = nh.advertise<situational_semantics_richness::situational_semantics_richness>("SSR/score/", 10);
 
 	// Score GUI
 	image_transport::ImageTransport imgt(nh);
@@ -186,6 +185,11 @@ int main(int argc, char *argv[])
 
 	//cv::Mat image(100, 300, CV_8UC3, cv::Scalar(0));
 	// Start wating for the publisher
+	
+	ros::Rate loop_rate(1);
+	
+	
+	return 0;
 	while(ros::ok())
 	{
 		ros::spinOnce(); 
@@ -251,14 +255,11 @@ int main(int argc, char *argv[])
 		}
 			
 
-		
+		loop_rate.sleep();
 
 	}
-
-	// End of the program
-	// detectionwrite.close();
-	// std::cout<< "detection.csv finish" << std::endl;
-	return 0;
+	
+	// return 0;
 
 
 }
