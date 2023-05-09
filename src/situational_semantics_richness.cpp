@@ -9,13 +9,11 @@
 #include <message_filters/subscriber.h>
 #include <message_filters/synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
-#include <chrono>
 
 
 #include <numeric>
 #include <iostream>
 #include <fstream>
-#include <tuple>
 #include "ros/time.h"	
 
 #include <image_transport/image_transport.h>
@@ -71,47 +69,7 @@ int zero_cnt = 0;
 // }
 
 
-// void synchronize(const radiation::sievert::ConstPtr& msg1, const sha::sha::ConstPtr& msg2)
-// { 
-//     // ros::Time msg_time = msg1->header.stamp;
-// 	float SV_timestamp = msg1->header.stamp;
-// 	float shascore_timestamp = msg2->header.stamp;
-	
-// 	while (true) 
-// 	{
-//         auto time1 = std::chrono::system_clock::now();
-//         auto time1_c = std::chrono::system_clock::to_time_t(time1);
 
-//         // Check if message2 should be published
-//         if (shascore_timestamp - SV_timestamp >= 10000000) {
-//             std::cout << std::put_time(std::localtime(&time2_c), "[%Y-%m-%d %H:%M:%S] ") << "Message 2" << std::endl;
-//             time2 += std::chrono::seconds(1); // Increment time2 by 1 second
-//             time2_c = std::chrono::system_clock::to_time_t(time2);
-//         }
-
-//         // Publish message1
-//         std::cout << std::put_time(std::localtime(&time1_c), "[%Y-%m-%d %H:%M:%S] ") << "Message 1" << std::endl;
-//         std::this_thread::sleep_for(std::chrono::milliseconds(10)); // Sleep for 10ms to simulate 100Hz
-//     }
-
-
-
-// 	float SV = msg1->sv;
-// 	float shascore = msg2->SHAScore;
-	
-// 	ROS_INFO("sv:%.3f", SV);
-//     std::cout<< "processcallback is running" << std::endl;
-// 	float ssr =  SV*1000 + shascore;
-
-
-
-
-
-
-
-
-	
-// }
 
 
 
@@ -172,7 +130,7 @@ int main(int argc, char *argv[])
     
 	// TimeSynchronizer<radiation::sievert, sha::sha> sync(sv_sub, sha_sub, 10);  
 	message_filters::Synchronizer<MySyncPolicy> sync(MySyncPolicy(10), sv_sub, sha_sub);
-    sync.registerCallback(boost::bind(&processcallback, _1, _2));
+    	sync.registerCallback(boost::bind(&processcallback, _1, _2));
 	
 
 
@@ -189,7 +147,6 @@ int main(int argc, char *argv[])
 	ros::Rate loop_rate(1);
 	
 	
-	return 0;
 	while(ros::ok())
 	{
 		ros::spinOnce(); 
@@ -259,7 +216,7 @@ int main(int argc, char *argv[])
 
 	}
 	
-	// return 0;
+	return 0;
 
 
 }
