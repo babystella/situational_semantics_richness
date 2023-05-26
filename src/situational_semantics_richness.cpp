@@ -9,19 +9,25 @@
 #include <message_filters/subscriber.h>
 #include <message_filters/synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
+#include <chrono>
+
+
 #include <numeric>
 #include <iostream>
 #include <fstream>
 #include <cmath>
+#include <tuple>
 #include "ros/time.h"	
 
 #include <image_transport/image_transport.h>
 #include <opencv2/highgui/highgui.hpp>
 #include <cv_bridge/cv_bridge.h>
 
+
 #include "sha/sha.h"
 #include "radiation/sievert.h"
 #include "situational_semantics_richness/situational_semantics_richness.h"
+#include "noise_detection/noise.h"
 
 ros::Publisher ssr_pub;
 image_transport::Publisher scoreImgpub; 
@@ -32,25 +38,19 @@ using namespace message_filters;
 using namespace std;
 using namespace sha;
 using namespace radiation;
+using namespace noise_detection;
 
 
 float sv;
 float shascore;
 float ssr;
-std::vector<double> weight = {1,1};
+std::vector<double> weight = {1,1,1};
 
 int lowscore_cnt = 0;
 int highscore_cnt = 0;
 int zero_cnt = 0;
 const int ARRAY_SIZE = 5;
 
-
-
-// void expert_weight(const std::vector<double>& inputs)
-// {
-	
-
-// }
 
 
 std::vector<double> softmax(const std::vector<double>& inputs) 
@@ -72,8 +72,7 @@ std::vector<double> softmax(const std::vector<double>& inputs)
     return softmaxresult;
 }
 
-double dotProduct(const std::vector<double>& v1, const std::vector<double>& v2) 
-{
+double dotProduct(const std::vector<double>& v1, const std::vector<double>& v2) {
     // Check if the vectors have the same size
     if (v1.size() != v2.size()) {
         std::cerr << "Error: Vectors must have the same size." << std::endl;
@@ -113,12 +112,12 @@ double attention(double newSSR)
 	}
 	
 	SSR_hat = dotProduct(softmax(time), SSRArray);
+	// ROS_INFO("sv:%.3f", SSR_hat);
 
 	return SSR_hat; 
 
 }
-
-void processcallback(const radiation::sievertConstPtr msg1, const sha::shaConstPtr msg2)
+void processcallback(const radiation::sievertConstPtr msg1, const sha::shaConstPtr msg2, const noise_detection::noiseConstPtr msg3)
 { 
     // ros::Time msg_time = msg1->header.stamp;
 	
@@ -133,22 +132,27 @@ void processcallback(const radiation::sievertConstPtr msg1, const sha::shaConstP
 
 	int SV_timestamp = msg1->header.stamp.toSec();
 	int shascore_timestamp = msg2->header.stamp.toSec();
+	int lasercore_timestamp = msg3->header.stamp.toSec();
 
 
 	float SV = msg1->sv;
 	float shascore = msg2->SHAScore;
+	float lasercore = msg3->score;
 	
-	// build ssr vector
+
 	ssrVector.push_back(SV);
 	ssrVector.push_back(shascore);
+	ssrVector.push_back(lasercore);
 	
-	// process ssr and ssr_hat
 	double ssr = dotProduct(weight, ssrVector);
 	double ssr_hat = attention(ssr);
 	
-
+	
+	
 	ROS_INFO("ssr:%.3f", ssr);
 	ROS_INFO("ssr_hat:%.3f", ssr_hat);
+
+
 
 	SSRscore.ssr = ssr_hat;
 		
@@ -156,7 +160,7 @@ void processcallback(const radiation::sievertConstPtr msg1, const sha::shaConstP
 	SSRscore.header.stamp = ros::Time::now();
 
 	ssr_pub.publish(SSRscore);
-
+		
 	
 	if (ssr > 0.9)
 		{
@@ -225,9 +229,10 @@ int main(int argc, char *argv[])
 
 	message_filters::Subscriber<radiation::sievert> sv_sub(nh, "/radiation/sievert", 1);
 	message_filters::Subscriber<sha::sha> sha_sub(nh, "/SHA/score/", 1);
-	typedef message_filters::sync_policies::ApproximateTime<radiation::sievert, sha::sha> MySyncPolicy;
-	message_filters::Synchronizer<MySyncPolicy> sync(MySyncPolicy(10), sv_sub, sha_sub);
-    sync.registerCallback(boost::bind(&processcallback, _1, _2));
+	message_filters::Subscriber<noise_detection::noise> laser_sub(nh, "/noise_evaluation", 1);
+	typedef message_filters::sync_policies::ApproximateTime<radiation::sievert, sha::sha, noise_detection::noise> MySyncPolicy;
+	message_filters::Synchronizer<MySyncPolicy> sync(MySyncPolicy(10), sv_sub, sha_sub, laser_sub);
+    	sync.registerCallback(boost::bind(&processcallback, _1, _2, _3));
 	
 
 
