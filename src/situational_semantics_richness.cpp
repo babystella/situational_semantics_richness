@@ -159,10 +159,10 @@ void processcallback(const radiation::sievertConstPtr msg1, const risk_assessmen
 	double ssr = dotProduct(weight, ssrVector);
 	double ssr_hat = attention(ssr);
 	
-	
-	
+	datawrite << ros::Time::now() <<","<<SV<<"," <<riskscore<<","<<lasercore<<","<<ssr_hat<<","<<robot_x<<","<<robot_y<<","<<robot_z<<'\n';
+	datawrite.close();
 	// ROS_INFO("ssr:%.3f", ssr);
-	ROS_INFO("ssr_hat:%.3f  X:%.2f Y:%.2f  Z:%.2f ", ssr_hat, robot_x, robot_y, robot_z);
+	ROS_INFO("ssr_hat:%.2f noise:%2f X:%.2f Y:%.2f  Z:%.2f ", ssr_hat, lasercore, robot_x, robot_y, robot_z);
 
 
 	SSRscore.ssr = ssr_hat;
@@ -173,10 +173,10 @@ void processcallback(const radiation::sievertConstPtr msg1, const risk_assessmen
 	ssr_pub.publish(SSRscore);
 		
 	
-	datawrite << ros::Time::now() <<SV<<"," <<riskscore<<","<<lasercore<<","<<ssr_hat<<","<<robot_x<<","<<robot_y<<","<<robot_z<<'\n';
+	
 
 
-	datawrite.close();
+	
 
 	if (ssr_hat > 0.8)
 		{
